@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#1267ad">
+<title>محاسبات نقاط فنرپیچی</title>
+<style>
+:root{--b:#1267ad;--bd:#dce4ec;--mut:#667482}
+*{box-sizing:border-box}body{margin:0;background:#f3f6fa;color:#17212b;font-family:Tahoma,Arial,sans-serif;line-height:1.7}
+.wrap{width:min(900px,calc(100% - 24px));margin:22px auto}
+header,.card{background:#fff;border:1px solid var(--bd);border-radius:16px;padding:20px;box-shadow:0 7px 24px #1836530d}
+header{display:flex;align-items:center;gap:16px}.logo{width:82px;height:82px;object-fit:contain}
+h1{font-size:clamp(20px,4vw,28px);color:#0d4f89;margin:0}.en{direction:ltr;text-align:right;color:var(--mut);font-size:13px}
+.intro{color:#465463;margin:18px 4px}.card{margin-top:16px}h2{font-size:19px;color:#0d4f89;margin:0 0 16px}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field label{display:block;font-weight:bold;margin-bottom:6px}
+input{width:100%;padding:12px;border:1px solid #bdc9d5;border-radius:9px;font-size:17px;direction:ltr;text-align:right}
+input:focus{outline:2px solid #b8d9f2;border-color:var(--b)}.hint,.foot{font-size:12px;color:var(--mut)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:17px}button{border:0;border-radius:9px;padding:12px 17px;font-weight:bold;font-size:14px;cursor:pointer;min-height:44px}
+.primary{background:var(--b);color:white}.secondary{background:#eaf1f7;color:#0d4f89}
+.error{display:none;background:#fff1f0;color:#b42318;border:1px solid #ffd0cc;border-radius:9px;padding:10px;margin-top:12px}
+.results{display:none}.metric{background:#eef6fc;border:1px solid #d1e6f7;border-radius:10px;padding:12px;margin-bottom:14px}
+.metric small{display:block;color:var(--mut)}.metric strong{font-size:24px;color:#0d4f89;direction:ltr;display:block}
+.tablewrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:260px}th,td{padding:11px;border-bottom:1px solid var(--bd);text-align:center}th{background:#edf4fa;color:#0d4f89}.num{direction:ltr;font-variant-numeric:tabular-nums}
+svg{width:100%;height:auto;display:block}.foot{text-align:center;margin:22px 6px}
+@media(max-width:600px){.wrap{width:calc(100% - 16px);margin:10px auto}.fields{grid-template-columns:1fr}header{padding:13px}.logo{width:64px;height:64px}.card{padding:15px}.actions button{flex:1 1 100%}}
+@media print{body{background:#fff}.wrap{width:100%;margin:0}.card,header{box-shadow:none;break-inside:avoid}.input-card,.actions,.foot{display:none!important}.results{display:block!important}}
+</style></head>
+<body><main class="wrap">
+<header><img class="logo" src="./logo.png" alt="لوگوی کارخانه" onerror="this.hidden=true"><div><h1>محاسبات نقاط فنرپیچی</h1><div class="en">Spring Coiling Point Calculator</div></div></header>
+<p class="intro">این ابزار نقاط میانی را بین حد پایین و حد بالای قطر محاسبه می‌کند. <b>تعداد نقاط شامل نقطه ابتدا و انتها است.</b></p>
+<section class="card input-card"><h2>اطلاعات ورودی</h2>
+<div class="fields">
+<div class="field"><label for="upper">حد بالای قطر (mm)</label><input id="upper" type="number" min="0" step=".001" value="120"></div>
+<div class="field"><label for="lower">حد پایین قطر (mm)</label><input id="lower" type="number" min="0" step=".001" value="40"></div>
+<div class="field"><label for="count">تعداد نقاط (با احتساب ابتدا و انتها)</label><input id="count" type="number" min="2" max="500" step="1" value="5"><div class="hint">حداقل ۲ و حداکثر ۵۰۰ نقطه</div></div>
+</div><div class="actions"><button class="primary" id="calc">محاسبه نقاط</button><button class="secondary" id="reset">بازنشانی</button></div><div class="error" id="error"></div></section>
+<section class="card results" id="results"><h2>نتایج محاسبه</h2><div class="metric"><small>فاصله یکنواخت بین نقاط</small><strong id="spacing">—</strong><small>میلی‌متر</small></div>
+<div class="tablewrap"><table><thead><tr><th>شماره نقطه</th><th>قطر (mm)</th></tr></thead><tbody id="rows"></tbody></table></div>
+<div class="actions"><button class="primary" id="csv">دانلود خروجی Excel-compatible (CSV)</button><button class="secondary" id="print">چاپ نتایج</button></div></section>
+<section class="card results" id="chartCard"><h2>نمودار تغییر قطر</h2><svg id="chart" viewBox="0 0 760 340" role="img" aria-label="نمودار تغییر قطر نقاط"></svg></section>
+<p class="foot">نسخه محاسباتی تحت وب — پیش از استفاده در برنامه دستگاه، ترتیب نقاط و تعریف قطر را با دستورالعمل همان دستگاه تطبیق دهید.</p>
+</main>
+<script>
+const $=id=>document.getElementById(id),fmt=n=>Number(n).toFixed(3);let vals=[];
+function err(msg){$('error').textContent=msg;$('error').style.display='block';$('results').style.display='none';$('chartCard').style.display='none'}
+function calc(){
+ $('error').style.display='none';
+ if(!$('upper').value||!$('lower').value||!$('count').value)return err('لطفاً تمام ورودی‌ها را تکمیل کنید.');
+ const hi=Number($('upper').value),lo=Number($('lower').value),n=Number($('count').value);
+ if(!Number.isFinite(hi)||!Number.isFinite(lo)||hi<0||lo<0)return err('قطرها باید عددی و بزرگ‌تر یا مساوی صفر باشند.');
+ if(hi<=lo)return err('حد بالای قطر باید از حد پایین قطر بزرگ‌تر باشد.');
+ if(!Number.isInteger(n)||n<2||n>500)return err('تعداد نقاط باید عدد صحیح بین ۲ تا ۵۰۰ باشد.');
+ const step=(hi-lo)/(n-1);vals=Array.from({length:n},(_,i)=>lo+i*step);vals[n-1]=hi;
+ $('spacing').textContent=fmt(step);$('rows').innerHTML=vals.map((v,i)=>`<tr><td class="num">${i+1}</td><td class="num">${fmt(v)}</td></tr>`).join('');
+ $('results').style.display='block';$('chartCard').style.display='block';draw(vals);
+}
+function draw(a){
+ const W=760,H=340,L=76,R=24,T=22,B=58,pw=W-L-R,ph=H-T-B,min=Math.min(...a),max=Math.max(...a),pad=(max-min)*.12||1,y0=min-pad,y1=max+pad;
+ const x=i=>L+(a.length===1?0:i*pw/(a.length-1)),y=v=>T+(y1-v)*ph/(y1-y0);let s='';
+ for(let k=0;k<=4;k++){let yy=T+k*ph/4,v=y1-k*(y1-y0)/4;s+=`<line x1="${L}" y1="${yy}" x2="${W-R}" y2="${yy}" stroke="#dce4ec"/><text x="${L-9}" y="${yy+4}" text-anchor="end" font-size="12" fill="#526171">${fmt(v)}</text>`}
+ s+=`<line x1="${L}" y1="${T}" x2="${L}" y2="${H-B}" stroke="#718096"/><line x1="${L}" y1="${H-B}" x2="${W-R}" y2="${H-B}" stroke="#718096"/>`;
+ s+=`<polyline points="${a.map((v,i)=>x(i)+','+y(v)).join(' ')}" fill="none" stroke="#1267ad" stroke-width="3" stroke-linejoin="round"/>`;
+ a.forEach((v,i)=>{s+=`<circle cx="${x(i)}" cy="${y(v)}" r="5" fill="#1267ad"/><text x="${x(i)}" y="${H-B+22}" text-anchor="middle" font-size="12" fill="#526171">${i+1}</text>`});
+ s+=`<text x="${W/2}" y="${H-7}" text-anchor="middle" font-size="13" fill="#344454">شماره نقطه</text><text x="17" y="${H/2}" text-anchor="middle" font-size="13" fill="#344454" transform="rotate(-90 17 ${H/2})">قطر (mm)</text>`;$('chart').innerHTML=s;
+}
+function csv(){if(!vals.length)return;let rows=[['شماره نقطه','قطر (mm)'],...vals.map((v,i)=>[i+1,fmt(v)])];let data='\uFEFF'+rows.map(r=>r.map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(',')).join('\r\n');let u=URL.createObjectURL(new Blob([data],{type:'text/csv;charset=utf-8;'})),a=document.createElement('a');a.href=u;a.download='spring_coiling_points.csv';a.click();URL.revokeObjectURL(u)}
+$('calc').addEventListener('click',calc);$('csv').addEventListener('click',csv);$('print').addEventListener('click',()=>print());
+$('reset').addEventListener('click',()=>{$('upper').value=120;$('lower').value=40;$('count').value=5;calc()});calc();
+</script></body></html>
